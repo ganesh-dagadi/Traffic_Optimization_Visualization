@@ -24,6 +24,33 @@ class DataUtils {
         }
       });
     });
+    //Here the corners of roads that are not connected to any of the other roads,
+    //Dont form junctions, however in the next step while generating subroads,
+    //We need those junctions too.. Thus we consider the corners of every road 
+    //If a junction is not already registered, we register it
+    data.features.forEach((feature) => {
+      if(seenCoordinates.indexOf(feature.geometry.coordinates[0]) == -1){
+        response.features.push({
+          type: "Feature",
+          properties: { "marker-color": "red" },
+          geometry: {
+            coordinates: feature.geometry.coordinates[0],
+            type: "Point",
+          },
+        });
+      }
+      if(seenCoordinates.indexOf(feature.geometry.coordinates[feature.geometry.coordinates.length -1]) == -1){
+        response.features.push({
+          type: "Feature",
+          properties: { "marker-color": "red" },
+          geometry: {
+            coordinates: feature.geometry.coordinates[feature.geometry.coordinates.length -1],
+            type: "Point",
+          },
+        });
+      }
+      
+    });
     return response
   }
 
@@ -41,6 +68,46 @@ class DataUtils {
       }
     }
     return response;
+  }
+
+  static generateSubRoads(juncData , roadsData){
+    const colors = ["red" , "blue" , "green" , "brown" , "black" , "white" , "purple" , "yellow" , "pink"]
+    const res = {
+      type : "FeatureCollection",
+      features : []
+    }
+
+    const juncs = []
+    juncData.features.forEach(feature=>{
+      juncs.push(String(feature.geometry.coordinates))
+    })
+    console.log(juncs)
+    //Now we have a 1D array of strings where each element is an array of coordinates
+    roadsData.features.forEach(feature=>{
+      let junFound = false
+      let prevIndex = 0;
+      for(let i = 0 ; i < feature.geometry.coordinates.length ; i++){
+        if(juncs.indexOf(String(feature.geometry.coordinates[i])) != -1){
+          if(junFound){
+            res.features.push({
+              type: "Feature",
+              properties: { "stroke": colors[i % 9] },
+              geometry: {
+                coordinates: feature.geometry.coordinates.slice(prevIndex , i+1),
+                type: "LineString",
+              },
+            })
+            prevIndex = i
+          }else{
+            junFound = true;
+            prevIndex = i;
+          }
+        }
+      }
+      junFound = false;
+      prevIndex= -1;
+    })
+    console.log(JSON.stringify(res))
   }
 }
 
